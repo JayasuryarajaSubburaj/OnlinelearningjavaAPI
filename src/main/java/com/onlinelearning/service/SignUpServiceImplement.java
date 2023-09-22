@@ -41,5 +41,26 @@ public class SignUpServiceImplement implements SignUpService {
 	public void deleteUserByEmail(String email) {
 	    signuprepo.deleteByEmail(email);
 	}
+	
+	@Override
+    public SignUpEntity updateUser(SignUpEntity updatedUser) {
+        // Fetch the existing user based on the email.
+        SignUpEntity existingUser = signuprepo.findByEmail(updatedUser.getEmail());
+        
+        // If the user doesn't exist, return null.
+        if (existingUser == null) {
+            return null;
+        }
+
+        // Update user details.
+        existingUser.setfirstName(updatedUser.getfirstName());
+        existingUser.setlastName(updatedUser.getlastName());
+        existingUser.setAddress(updatedUser.getAddress());
+        existingUser.setGender(updatedUser.getGender());
+        existingUser.setphoneNumber(updatedUser.getphoneNumber());
+        
+        // Save and return the updated user.
+        return signuprepo.save(existingUser);
+    }
 		
 }

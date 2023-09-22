@@ -22,9 +22,12 @@ public class SignUpEntity {
 	private String phoneNumber;
 	private String email;
 	private String password;
+	private String doorNo;
+	private String street;
+	private String city;
 	private String state;
+	private String country;
 	
-
 	private String GeneratedId;
 	
 	private String resetToken;
@@ -80,20 +83,42 @@ public class SignUpEntity {
 	}
 	public void setEmail(String email) {
 		this.email = email;
-
 	}
 	public String getPassword() {
 		return password;
 	}
 	public void setPassword(String password) {
 		this.password = password;
-
+	}
+	public String getDoorNumber() {
+	    return doorNo;
+	}
+	public void setDoorNumber(String doorNo) {
+	    this.doorNo = doorNo;
+	}
+	public String getStreetName() {
+	    return street;
+	}
+	public void setStreetName(String street) {
+	    this.street= street;
+	}
+	public String getCity() {
+	    return city;
+	}
+	public void setCity(String city) {
+	    this.city = city;
 	}
 	public String getState() {
 		return state;
 	}
 	public void setState(String state) {
 		this.state = state;
+	}
+	public String getCountry() {
+	    return country;
+	}
+	public void setCountry(String country) {
+	    this.country = country;
 	}
 	public static String generatedid() {
 		return UUID.randomUUID().toString();
@@ -124,6 +149,10 @@ public class SignUpEntity {
 	
 	public SignUpEntity() {
 		this.GeneratedId = generatedid(); 
+	}
+	public void clearSensitiveData() {
+		this.password = null;
+		this.GeneratedId = null;
 	}
 	
 }
