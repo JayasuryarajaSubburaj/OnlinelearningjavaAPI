@@ -34,24 +34,13 @@ public class SignUpController {
 //        String fullAddress = signent.getAddress() + ", " + signent.getState();
 //        signent.setAddress(fullAddress);
 		
-		// Combine door number, street name, city, country, state with address
-		String fullAddress = signent.getDoorNumber() + ", " +
-		                     signent.getStreetName() + ", " +
-		                     signent.getCity() + ", " +
-		                     signent.getState()+ ", " +
-		                     signent.getCountry();    
-		signent.setAddress(fullAddress);
-
-
 		String result = signupservice.saveUser(signent);
-
 		if ("Registration Success".equals(result)) {
 			return new ResponseEntity<String>(result, HttpStatus.CREATED);
 		} 
 		else {
 			return new ResponseEntity<String>(result, HttpStatus.BAD_REQUEST);
 		}
-
 	}
 	
 	@DeleteMapping("/delete-user/{email}")
@@ -64,20 +53,43 @@ public class SignUpController {
 	public ResponseEntity<SignUpEntity> getUserByEmail(@PathVariable String email) {
 	    SignUpEntity user = signupRepo.findByEmail(email);
 	    if (user != null) {
-	        user.clearSensitiveData();  // This will nullify password and GeneratedId
+	        //user.clearSensitiveData();  // This will nullify password and GeneratedId
 	        return ResponseEntity.ok(user);
 	    } else {
 	        return ResponseEntity.notFound().build();
 	    }
+	    
+//	    if (user != null) {
+//	        SignUpEntity userResponse = new SignUpEntity();
+//	        userResponse.setfirstName(user.getfirstName());
+//	        userResponse.setlastName(user.getlastName());
+//	        userResponse.setGender(user.getGender());
+//	        userResponse.setphoneNumber(user.getphoneNumber());
+//	        return ResponseEntity.ok(userResponse);
+//	    } else {
+//	        return ResponseEntity.notFound().build();
+//	    }
 	}
 	
-	@PutMapping("/update-user")
-    public ResponseEntity<SignUpEntity> updateUser(@RequestBody SignUpEntity updatedUser) {
-        SignUpEntity savedUser = signupservice.updateUser(updatedUser);
-        if (savedUser != null) {
-            return ResponseEntity.ok(savedUser);
-        } else {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
-        }
-    }
+//	@PutMapping("/update-user/{email}")
+//    public ResponseEntity<SignUpEntity> updateUser(@RequestBody SignUpEntity updatedUser) {
+//        SignUpEntity savedUser = signupservice.updateUser(updatedUser);
+//        if (savedUser != null) {
+//            return ResponseEntity.ok(savedUser);
+//        } else {
+//            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+//        }
+//    }
+	
+	@PutMapping("/update-user/{email}")
+	public ResponseEntity<SignUpEntity> updateUser(@PathVariable String email, @RequestBody SignUpEntity updatedUser) {
+	    SignUpEntity savedUser = signupservice.updateUser(email, updatedUser);
+	    if (savedUser != null) {
+	        return ResponseEntity.ok(savedUser);
+	    } else {
+	        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+	    }
+	}
+
+	
 }

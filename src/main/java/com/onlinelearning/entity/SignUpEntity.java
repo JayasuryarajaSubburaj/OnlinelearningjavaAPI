@@ -22,6 +22,7 @@ public class SignUpEntity {
 	private String phoneNumber;
 	private String email;
 	private String password;
+	private String label;
 	private String doorNo;
 	private String street;
 	private String city;
@@ -57,7 +58,7 @@ public class SignUpEntity {
 	public String getAddress() {
 		return address;
 	}
-	public void setAddress(String address) {
+	public void setAddress(String string, String string2, String string3, String string4, String string5, String string6) {
 		this.address = address;
 	}
 	public String getGender() {
@@ -89,6 +90,12 @@ public class SignUpEntity {
 	}
 	public void setPassword(String password) {
 		this.password = password;
+	}
+	public String getLabel() {
+		return label;
+	}
+	public void setLabel(String label) {
+		this.label = label;
 	}
 	public String getDoorNumber() {
 	    return doorNo;

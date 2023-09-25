@@ -8,6 +8,7 @@ public interface SignUpService {
 	
 	String saveUser(SignUpEntity SignUp);
 	void deleteUserByEmail(String email);
-	SignUpEntity updateUser(SignUpEntity updatedUser);
+//	SignUpEntity updateUser(SignUpEntity updatedUser);
+	SignUpEntity updateUser(String email, SignUpEntity updatedUser);
 
 }
