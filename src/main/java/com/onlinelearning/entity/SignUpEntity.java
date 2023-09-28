@@ -1,6 +1,8 @@
 package com.onlinelearning.entity;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.data.annotation.Id;
@@ -16,7 +18,17 @@ public class SignUpEntity {
 	private String id;
 	private String firstName;
 	private String lastName;
-	private String address;
+	//private String address;
+	private List<Address> addresses=	new ArrayList<>();; 
+	
+	public List<Address> getAddresses() {
+		return addresses;
+	}
+
+	public void setAddresses(List<Address> addresses) {
+		this.addresses =new ArrayList<>();
+	}
+
 	private String gender;
 	private String dateofbirth;
 	private String phoneNumber;
@@ -55,13 +67,17 @@ public class SignUpEntity {
 		this.lastName = lastName;
 	}
 
-	public String getAddress() {
-		return address;
-	}
+//	public String getAddress() {
+//		return address;
+//	}
 
-	public void setAddress(String label, String doorNo, String street, String city, String state, String country) {
-		this.address = label + ", " + doorNo + ", " + street + ", " + city + ", " + state + ", " + country;
-	}
+//	public void setAddress(String label, String doorNo, String street, String city, String state, String country) {
+//		this.address = label + ", " + doorNo + ", " + street + ", " + city + ", " + state + ", " + country;
+//	}
+	
+//	public void setAddress(String doorNo, String street, String city, String state, String country) {
+//		this.address = doorNo + ", " + street + ", " + city + ", " + state + ", " + country;
+//	}
 
 	public String getGender() {
 		return gender;
@@ -150,65 +166,96 @@ public class SignUpEntity {
 		this.generatedId = Generatedid();
 	}
 
-	public static class AddressUpdateRequest {
+//	public  class AddressUpdateRequest {
+//
+//		private String doorNo;
+//		private String street;
+//		private String city;
+//		private String state;
+//		private String country;
+//
+//		// Getters and setters
+//
+//		public String getDoorNo() {
+//			return doorNo;
+//		}
+//
+//		public void setDoorNo(String doorNo) {
+//			this.doorNo = doorNo;
+//		}
+//
+//		public String getStreet() {
+//			return street;
+//		}
+//
+//		public void setStreet(String street) {
+//			this.street = street;
+//		}
+//
+//		public String getCity() {
+//			return city;
+//		}
+//
+//		public void setCity(String city) {
+//			this.city = city;
+//		}
+//
+//		public String getState() {
+//			return state;
+//		}
+//
+//		public void setState(String state) {
+//			this.state = state;
+//		}
+//
+//		public String getCountry() {
+//			return country;
+//		}
+//
+//		public void setCountry(String country) {
+//			this.country = country;
+//		}
 
-		private String label;
-		private String doorNo;
-		private String street;
-		private String city;
-		private String state;
-		private String country;
-
-		// Getters and setters
-
-		public String getLabel() {
-			return label;
-		}
-
-		public void setLabel(String label) {
-			this.label = label;
-		}
-
+//	}
+	
+	public static class Address {
+	    private String doorNo;
+	    private String street;
+	    private String city;
+	    private String state;
+	    private String country;
+	    
+	    // Getters, Setters, Constructors omitted for brevity...
 		public String getDoorNo() {
 			return doorNo;
 		}
-
 		public void setDoorNo(String doorNo) {
 			this.doorNo = doorNo;
 		}
-
 		public String getStreet() {
 			return street;
 		}
-
 		public void setStreet(String street) {
 			this.street = street;
 		}
-
 		public String getCity() {
 			return city;
 		}
-
 		public void setCity(String city) {
 			this.city = city;
 		}
-
 		public String getState() {
 			return state;
 		}
-
 		public void setState(String state) {
 			this.state = state;
 		}
-
 		public String getCountry() {
 			return country;
 		}
-
 		public void setCountry(String country) {
 			this.country = country;
 		}
-
 	}
 
 }
