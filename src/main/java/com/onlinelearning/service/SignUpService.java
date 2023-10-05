@@ -18,14 +18,18 @@ public interface SignUpService {
 	
 	List<Address> addAddress(String email, Address newAddress);
 	
-	List<Address> editAddressByIndex(String email, int index, Address updatedAddress);
+	List<Address> editAddressById(String email, String addressId, Address updatedAddress);
 	
-	List<Address> deleteAddressByIndex(String email, int index);
+	List<Address> deleteAddressById(String email, String addressId);
 	
 	List<Address> getAllAddressesByEmail(String email);
 	
 	boolean validateLogin(String email, String password);
 	
+	String getTokenForUser(String email);
+	
 	void logoutUser(String email);
+
+	String decodeJWTAndGetEmail(String token);
 
 }

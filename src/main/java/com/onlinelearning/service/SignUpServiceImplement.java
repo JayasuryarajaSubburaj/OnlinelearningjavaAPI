@@ -8,6 +8,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.algorithms.Algorithm;
+import com.auth0.jwt.interfaces.DecodedJWT;
+import com.auth0.jwt.interfaces.JWTVerifier;
 import com.onlinelearning.entity.LoginLog;
 import com.onlinelearning.entity.SignUpEntity;
 import com.onlinelearning.entity.SignUpEntity.Address;
@@ -94,28 +98,55 @@ public class SignUpServiceImplement implements SignUpService {
     }
 	
 	@Override
-	public List<Address> editAddressByIndex(String email, int index, Address updatedAddress) {
+	public List<Address> editAddressById(String email, String addressId, Address updatedAddress) {
 	    SignUpEntity user = signuprepo.findByEmail(email);
-	    if (user != null && user.getAddresses() != null && index >= 0 && index < user.getAddresses().size()) {
-	        user.getAddresses().set(index, updatedAddress);  // Set the address at the specified index
+	    if (user != null) {
+	        List<Address> addresses = user.getAddresses();
+	        boolean found = false;
+	        
+	        for (Address addr : addresses) {
+	            if (addr.getId().equals(addressId)) {
+	                addr.setDoorNo(updatedAddress.getDoorNo());
+	                addr.setStreet(updatedAddress.getStreet());
+	                addr.setCity(updatedAddress.getCity());
+	                addr.setState(updatedAddress.getState());
+	                addr.setCountry(updatedAddress.getCountry());
+	                
+	                found = true;
+	                break;
+
+//	                signuprepo.save(user);
+//	                return user.getAddresses();  // Return the list of addresses
+	            }
+	        }
+	        if(!found) {
+	            throw new RuntimeException("Address not found with id: " + addressId);
+	        }
+	        
 	        signuprepo.save(user);
-	        return user.getAddresses();  // Return the list of addresses
+            return user.getAddresses();  // Return the list of addresses
+      
 	    } else {
-	        throw new RuntimeException("User not found with email: " + email + " or invalid address index.");
+	        throw new RuntimeException("User not found with email: " + email);
 	    }
 	}
+
 	
 	@Override
-	public List<Address> deleteAddressByIndex(String email, int index) {
+	public List<Address> deleteAddressById(String email, String addressId) {
 	    SignUpEntity user = signuprepo.findByEmail(email);
-	    if (user != null && user.getAddresses() != null && index >= 0 && index < user.getAddresses().size()) {
-	        user.getAddresses().remove(index);  // Remove the address at the specified index
+	    if (user != null) {
+	        List<Address> addresses = user.getAddresses();
+	        
+	        addresses.removeIf(addr -> addr.getId().equals(addressId));
+
 	        signuprepo.save(user);
-	        return user.getAddresses();  // Return the list of addresses
+	        return user.getAddresses();  // Return the updated list of addresses
 	    } else {
-	        throw new RuntimeException("User not found with email: " + email + " or invalid address index.");
+	        throw new RuntimeException("User not found with email: " + email);
 	    }
 	}
+
 	
 	@Override
 	public List<Address> getAllAddressesByEmail(String email) {
@@ -127,23 +158,87 @@ public class SignUpServiceImplement implements SignUpService {
 	    }
 	}
 	
-	@Override
-	public boolean validateLogin(String email, String password) {
-	    SignUpEntity user = signuprepo.findByEmail(email);
-	    if (user != null && passwordEncoder.matches(password, user.getPassword())) {
-	        // Store the successful login attempt
-	        LoginLog log = new LoginLog();
-	        log.setEmail(email);
-	        log.setLoginTimestamp(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
-	        //log.setPassword(password);
-	        log.setPassword(passwordEncoder.encode(password));
-	        //SignUp.setPassword(passwordEncoder.encode(SignUp.getPassword()));
-	        loginLogRepo.save(log);
+//	@Override
+//	public boolean validateLogin(String email, String password) {
+//	    SignUpEntity user = signuprepo.findByEmail(email);
+//	    if (user != null && passwordEncoder.matches(password, user.getPassword())) {
+//	        // Store the successful login attempt
+//	        LoginLog log = new LoginLog();
+//	        log.setEmail(email);
+//	        log.setLoginTimestamp(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+//	        //log.setPassword(password);
+//	        log.setPassword(passwordEncoder.encode(password));
+//	        //SignUp.setPassword(passwordEncoder.encode(SignUp.getPassword()));
+//	        loginLogRepo.save(log);
+//
+//	        return true;  // Login successful
+//	    }
+//	    return false;  // Login failed
+//	}
+	
+	    private String secret = "Gyr0nebonlinele@rninG2023#"; 
 
-	        return true;  // Login successful
+
+	    @Override
+	    public boolean validateLogin(String email, String password) {
+	        SignUpEntity user = signuprepo.findByEmail(email);
+	        if (user != null && passwordEncoder.matches(password, user.getPassword())) {
+	            
+	            // Generate JWT Token
+//	            Algorithm algorithm = Algorithm.HMAC256(secret);
+//	            String token = JWT.create()
+//	                .withIssuer("online-learning-app")
+//	                .withClaim("email", email)
+//	                //.withClaim("password", password)
+//	                .sign(algorithm);
+
+	            // Store the successful login attempt
+	            LoginLog log = new LoginLog();
+	            log.setEmail(email);
+	            log.setLoginTimestamp(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+//	            log.setJwtToken(token); // Set the JWT token
+	            loginLogRepo.save(log);
+
+	            return true;  // Login successful
+	        }
+	        return false;  // Login failed
 	    }
-	    return false;  // Login failed
-	}
+	    
+//	    @Override
+//	    public String validateLogin(String email, String password) {
+//	        SignUpEntity user = signuprepo.findByEmail(email);
+//	        if (user != null && passwordEncoder.matches(password, user.getPassword())) {
+//	            
+//	            // Generate JWT Token
+//	            Algorithm algorithm = Algorithm.HMAC256(secret);
+//	            String token = JWT.create()
+//	                .withIssuer("online-learning-app")
+//	                .withClaim("email", email)
+//	                .sign(algorithm);
+//
+//	            // Store the successful login attempt
+//	            LoginLog log = new LoginLog();
+//	            log.setEmail(email);
+//	            log.setLoginTimestamp(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+//	            log.setJwtToken(token); // Set the JWT token
+//	            loginLogRepo.save(log);
+//
+//	            return token;  // Return the generated JWT token
+//	        }
+//	        return null;  // Login failed
+//	    }
+	    
+	    @Override
+	    public String getTokenForUser(String email) {
+	        // You can generate the token similarly to how you do it in validateLogin
+	        Algorithm algorithm = Algorithm.HMAC256(secret);
+	        String token = JWT.create()
+	            .withIssuer("online-learning-app")
+	            .withClaim("email", email)
+	            .sign(algorithm);
+	        return token;
+	    }
+
 	
 	@Override
 	public void logoutUser(String email) {
@@ -154,4 +249,18 @@ public class SignUpServiceImplement implements SignUpService {
 	        throw new RuntimeException("User not found in login logs with email: " + email);
 	    }
 	}
+	
+	public String decodeJWTAndGetEmail(String token) {
+	    try {
+	        Algorithm algorithm = Algorithm.HMAC256(secret);
+	        JWTVerifier verifier = JWT.require(algorithm)
+	                .withIssuer("online-learning-app")
+	                .build();
+	        DecodedJWT jwt = verifier.verify(token);
+	        return jwt.getClaim("email").asString();
+	    } catch (Exception exception) {
+	        throw new RuntimeException("Invalid token: " + exception.getMessage());
+	    }
+	}
+
 }

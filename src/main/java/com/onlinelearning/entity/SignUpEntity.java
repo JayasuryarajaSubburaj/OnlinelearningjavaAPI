@@ -19,7 +19,7 @@ public class SignUpEntity {
 	private String firstName;
 	private String lastName;
 	//private String address;
-	private List<Address> addresses=	new ArrayList<>();; 
+	private List<Address> addresses=new ArrayList<>();; 
 	
 	public List<Address> getAddresses() {
 		return addresses;
@@ -66,18 +66,6 @@ public class SignUpEntity {
 	public void setlastName(String lastName) {
 		this.lastName = lastName;
 	}
-
-//	public String getAddress() {
-//		return address;
-//	}
-
-//	public void setAddress(String label, String doorNo, String street, String city, String state, String country) {
-//		this.address = label + ", " + doorNo + ", " + street + ", " + city + ", " + state + ", " + country;
-//	}
-	
-//	public void setAddress(String doorNo, String street, String city, String state, String country) {
-//		this.address = doorNo + ", " + street + ", " + city + ", " + state + ", " + country;
-//	}
 
 	public String getGender() {
 		return gender;
@@ -165,60 +153,10 @@ public class SignUpEntity {
 	public SignUpEntity() {
 		this.generatedId = Generatedid();
 	}
-
-//	public  class AddressUpdateRequest {
-//
-//		private String doorNo;
-//		private String street;
-//		private String city;
-//		private String state;
-//		private String country;
-//
-//		// Getters and setters
-//
-//		public String getDoorNo() {
-//			return doorNo;
-//		}
-//
-//		public void setDoorNo(String doorNo) {
-//			this.doorNo = doorNo;
-//		}
-//
-//		public String getStreet() {
-//			return street;
-//		}
-//
-//		public void setStreet(String street) {
-//			this.street = street;
-//		}
-//
-//		public String getCity() {
-//			return city;
-//		}
-//
-//		public void setCity(String city) {
-//			this.city = city;
-//		}
-//
-//		public String getState() {
-//			return state;
-//		}
-//
-//		public void setState(String state) {
-//			this.state = state;
-//		}
-//
-//		public String getCountry() {
-//			return country;
-//		}
-//
-//		public void setCountry(String country) {
-//			this.country = country;
-//		}
-
-//	}
 	
 	public static class Address {
+		
+		private String id = UUID.randomUUID().toString();
 	    private String doorNo;
 	    private String street;
 	    private String city;
@@ -226,6 +164,13 @@ public class SignUpEntity {
 	    private String country;
 	    
 	    // Getters, Setters, Constructors omitted for brevity...
+	    public String getId() {
+	        return id;
+	    }
+
+	    public void setId(String id) {
+	        this.id = id;
+	    }
 		public String getDoorNo() {
 			return doorNo;
 		}
