@@ -17,13 +17,13 @@ public class LoginController {
 	@Autowired
 	LoginService loginService;
 
-	@PostMapping("/login")
-	public ResponseEntity<String> loginUser(@RequestBody SignUpEntity user) {
-		if (loginService.validateUser(user.getEmail(), user.getPassword())) {
-			return ResponseEntity.ok("Login Successfully");
-		} else {
-			return ResponseEntity.status(401).body("Invalid Credentials");
-		}
-	}
+//	@PostMapping("/login")
+//	public ResponseEntity<String> loginUser(@RequestBody SignUpEntity user) {
+//		if (loginService.validateUser(user.getEmail(), user.getPassword())) {
+//			return ResponseEntity.ok("Login Successfully");
+//		} else {
+//			return ResponseEntity.status(401).body("Invalid Credentials");
+//		}
+//	}
 	
 }

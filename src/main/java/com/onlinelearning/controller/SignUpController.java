@@ -1,6 +1,13 @@
 package com.onlinelearning.controller;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -15,10 +22,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.onlinelearning.entity.ResponseMessage;
+import com.onlinelearning.entity.ResponseMessageWithToken;
 import com.onlinelearning.entity.SignUpEntity;
 import com.onlinelearning.entity.SignUpEntity.Address;
 import com.onlinelearning.repo.SignUpRepository;
 import com.onlinelearning.service.SignUpService;
+import com.onlinelearning.service.SignUpServiceImplement;
+import com.onlinelearning.service.SignUpTask;
 
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -33,397 +43,546 @@ public class SignUpController {
 
 	@Autowired
 	SignUpService signupservice;
-	
+
+	@Autowired
+	SignUpServiceImplement signUpService1;
+
 	@Autowired
 	HttpServletRequest request; // Autowire HttpServletRequest to access cookies
-	
+
 	@Autowired
 	HttpServletResponse response;
 
+	@Autowired
+	private ExecutorService executorService; // Assuming you've created a bean for this, shown later
 
+	@Autowired
+	private ThreadPoolExecutor threadPoolExecutor;
+
+	@Autowired
+	private Semaphore semaphore;
 
 //	@PostMapping("/signup")
-//	public ResponseEntity<String> createuser(@RequestBody SignUpEntity signent) {
+//	public ResponseEntity<ResponseMessage> createuser(@RequestBody SignUpEntity signent) {
 //		String result = signupservice.saveUser(signent);
 //		if ("Registration Success".equals(result)) {
-//			return new ResponseEntity<String>(result, HttpStatus.CREATED);
+//			return new ResponseEntity<>(new ResponseMessage("Registration Success"), HttpStatus.CREATED);
 //		} else {
-//			return new ResponseEntity<String>(result, HttpStatus.BAD_REQUEST);
+//			return new ResponseEntity<>(new ResponseMessage(result), HttpStatus.BAD_REQUEST);
 //		}
+//	}
+
+//	@PostMapping("/signup")
+//	public ResponseEntity<List<ResponseMessage>> createUsers(@RequestBody List<SignUpEntity> signUpEntities) {
+//	    
+//		 // Check if we have too many active tasks
+//	    if (threadPoolExecutor.getActiveCount() <= 8) {
+//	        return new ResponseEntity<>(Collections.singletonList(new ResponseMessage("Server is busy. Try again later.")), HttpStatus.SERVICE_UNAVAILABLE);
+//	    }
+//		
+//	    List<Callable<String>> tasks = new ArrayList<>();
+//	    for (SignUpEntity signEnt : signUpEntities) {
+//	        tasks.add(new SignUpTask(signEnt, signUpService1));
+//	    }
+//
+//	    List<ResponseMessage> responses;
+//	    try {
+//	        responses = threadPoolExecutor.invokeAll(tasks).stream()
+//	            .map(future -> {
+//	                try {
+//	                    return new ResponseMessage(future.get());
+//	                } catch (Exception e) {
+//	                    return new ResponseMessage("Error occurred");
+//	                }
+//	            })
+//	            .collect(Collectors.toList());
+//	    } catch (InterruptedException e) {
+//	        return new ResponseEntity<>(Collections.singletonList(new ResponseMessage("Error processing requests")), HttpStatus.INTERNAL_SERVER_ERROR);
+//	    }
+//
+//	    return new ResponseEntity<>(responses, HttpStatus.CREATED);
+//	}
+
+//	@PostMapping("/signup")
+//	public ResponseEntity<List<ResponseMessage>> createUsers(@RequestBody List<SignUpEntity> signUpEntities) {
+//
+//		// Try acquiring a permit for each user. If unsuccessful for any user, return a
+//		// service unavailable response.
+//		int requiredPermits = signUpEntities.size();
+//		if (!semaphore.tryAcquire(requiredPermits)) {
+//			return new ResponseEntity<>(
+//					Collections.singletonList(new ResponseMessage("Server is busy. Try again later.")),
+//					HttpStatus.SERVICE_UNAVAILABLE);
+//		}
+//
+//		try {
+//			List<Callable<String>> tasks = new ArrayList<>();
+//			for (SignUpEntity signEnt : signUpEntities) {
+//				tasks.add(new SignUpTask(signEnt, signUpService1));
+//			}
+//
+//			List<ResponseMessage> responses = threadPoolExecutor.invokeAll(tasks).stream().map(future -> {
+//				try {
+//					return new ResponseMessage(future.get());
+//				} catch (Exception e) {
+//					return new ResponseMessage("Error occurred");
+//				}
+//			}).collect(Collectors.toList());
+//
+//			return new ResponseEntity<>(responses, HttpStatus.CREATED);
+//		} catch (InterruptedException e) {
+//			return new ResponseEntity<>(Collections.singletonList(new ResponseMessage("Error processing requests")),
+//					HttpStatus.INTERNAL_SERVER_ERROR);
+//		} finally {
+//			semaphore.release(requiredPermits); // Always release the permits
+//		}
+//	}
+	
+//	@PostMapping("/signup")
+//	public ResponseEntity<List<ResponseMessage>> createUsers(@RequestBody List<SignUpEntity> signUpEntities) {
+//
+//	    // Check the number of users in the request and determine if there are enough permits
+//	    int usersToProcess = signUpEntities.size();
+//	    if (!semaphore.tryAcquire(usersToProcess)) {
+//	        return new ResponseEntity<>(
+//	                Collections.singletonList(new ResponseMessage("Server is busy. Please try again later.")),
+//	                HttpStatus.SERVICE_UNAVAILABLE);
+//	    }
+//
+//	    try {
+//	        // Limit to only process the first 8 users (or less if the list is smaller)
+//	        int allowableUsers = Math.min(usersToProcess, 8);
+//	        signUpEntities = signUpEntities.subList(0, allowableUsers);
+//
+//	        List<Callable<String>> tasks = signUpEntities.stream()
+//	                .map(signEnt -> new SignUpTask(signEnt, signUpService1))
+//	                .collect(Collectors.toList());
+//
+//	        List<ResponseMessage> responses = threadPoolExecutor.invokeAll(tasks).stream()
+//	                .map(future -> {
+//	                    try {
+//	                        return new ResponseMessage(future.get());
+//	                    } catch (Exception e) {
+//	                        return new ResponseMessage("Error occurred: " + e.getMessage());
+//	                    }
+//	                })
+//	                .collect(Collectors.toList());
+//
+//	        return new ResponseEntity<>(responses, HttpStatus.CREATED);
+//	    } catch (InterruptedException e) {
+//	        return new ResponseEntity<>(
+//	                Collections.singletonList(new ResponseMessage("Error processing the requests.")),
+//	                HttpStatus.INTERNAL_SERVER_ERROR);
+//	    } finally {
+//	        // Always release the acquired permits
+//	        semaphore.release(usersToProcess);
+//	    }
 //	}
 	
 	@PostMapping("/signup")
-	public ResponseEntity<ResponseMessage> createuser(@RequestBody SignUpEntity signent) {
-	    String result = signupservice.saveUser(signent);
-	    if ("Registration Success".equals(result)) {
-	        return new ResponseEntity<>(new ResponseMessage("Registration Success"), HttpStatus.CREATED);
-	    } else {
-	        return new ResponseEntity<>(new ResponseMessage(result), HttpStatus.BAD_REQUEST);
+	public ResponseEntity<ResponseMessage> createUser(@RequestBody SignUpEntity signUpEntity) {
+
+	    // Check if there's an available permit
+	    if (!semaphore.tryAcquire()) {
+	        return new ResponseEntity<>(
+	                new ResponseMessage("Server is busy. Please try again later."),
+	                HttpStatus.SERVICE_UNAVAILABLE);
+	    }
+
+	    try {
+	        Callable<String> task = new SignUpTask(signUpEntity, signUpService1);
+	        String responseMessage = threadPoolExecutor.submit(task).get();
+
+	        return new ResponseEntity<>(new ResponseMessage(responseMessage), HttpStatus.CREATED);
+	    } catch (Exception e) {
+	        return new ResponseEntity<>(
+	                new ResponseMessage("Error occurred: " + e.getMessage()),
+	                HttpStatus.INTERNAL_SERVER_ERROR);
+	    } finally {
+	        // Always release the acquired permit
+	        semaphore.release();
 	    }
 	}
 
 
-//	@DeleteMapping("/delete-user/{email}")
-//	public ResponseEntity<String> deleteUserByEmail(@PathVariable String email) {
-//		signupservice.deleteUserByEmail(email);
-//		return ResponseEntity.ok("Your account has been deleted");
-//	}
-	
+
 	@DeleteMapping("/delete-user")
 	public ResponseEntity<String> deleteUserByEmail() {
-	    String token = extractTokenFromCookie(request);
-	    if (token == null) {
-	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("No JWT token found in the cookie.");
-	    }
-	    String email = signupservice.decodeJWTAndGetEmail(token);
-	 // Deleting the user details using the email extracted from the token
-	    try {
-	        signupservice.deleteUserByEmail(email);
-	        return ResponseEntity.ok("Your account has been deleted");
-	    } catch(Exception e) {
-	        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Error during deletion: " + e.getMessage());
-	    }
+		String token = extractTokenFromCookie(request);
+		if (token == null) {
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("No JWT token found in the cookie.");
+		}
+		String email = signupservice.decodeJWTAndGetEmail(token);
+		// Deleting the user details using the email extracted from the token
+		try {
+			signupservice.deleteUserByEmail(email);
+			return ResponseEntity.ok("Your account has been deleted");
+		} catch (Exception e) {
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Error during deletion: " + e.getMessage());
+		}
 
 	}
 
-	
 	public String extractTokenFromCookie(HttpServletRequest request) {
-	    Cookie[] cookies = request.getCookies();
-	    if (cookies != null) {
-	        for (Cookie cookie : cookies) {
-	            if ("jwt-token".equals(cookie.getName())) {
-	                return cookie.getValue();
-	            }
-	        }
-	    }
-	    return null;
+		Cookie[] cookies = request.getCookies();
+		if (cookies != null) {
+			for (Cookie cookie : cookies) {
+				if ("jwt-token".equals(cookie.getName())) {
+					return cookie.getValue();
+				}
+			}
+		}
+		return null;
 	}
 
-//	@GetMapping("/user-details/{email}")
-//	public ResponseEntity<SignUpEntity> getUserByEmail(@PathVariable String email) {
-//		SignUpEntity user = signupRepo.findByEmail(email);
-//		if (user != null) {
-//			return ResponseEntity.ok(user);
-//		} else {
-//			return ResponseEntity.notFound().build();
-//		}
-//	}
-	
 	@GetMapping("/user-details")
 	public ResponseEntity<SignUpEntity> getUserByEmail() {
-	    String token = extractTokenFromCookie(request);
-	    if (token == null) {
-	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
-	    }
-	    String email = signupservice.decodeJWTAndGetEmail(token);
-	    SignUpEntity user = signupRepo.findByEmail(email);
-	    if (user != null) {
-//	        return ResponseEntity.ok(user);
-	    	SignUpEntity dto = new SignUpEntity();
-	        dto.setfirstName(user.getfirstName());
-	        dto.setlastName(user.getlastName());
-	        dto.setGender(user.getGender());
-	        dto.setphoneNumber(user.getphoneNumber());
-	        dto.setEmail(user.getEmail());
-	        return ResponseEntity.ok(dto);
-	    } else {
-	        return ResponseEntity.notFound().build();
-	    }
+		String token = extractTokenFromCookie(request);
+		if (token == null) {
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
+		}
+		String email = signupservice.decodeJWTAndGetEmail(token);
+		SignUpEntity user = signupRepo.findByEmail(email);
+		if (user != null) {
+			SignUpEntity dto = new SignUpEntity();
+			dto.setfirstName(user.getfirstName());
+			dto.setlastName(user.getlastName());
+			dto.setGender(user.getGender());
+			dto.setphoneNumber(user.getphoneNumber());
+			dto.setEmail(user.getEmail());
+			return ResponseEntity.ok(dto);
+		} else {
+			return ResponseEntity.notFound().build();
+		}
 	}
-	
-//	@PutMapping("/update-user/{email}")
-//	public ResponseEntity<SignUpEntity> updateUserDetails(@PathVariable String email, @RequestBody SignUpEntity user) {
-//	    SignUpEntity updatedUser = signupservice.updateUser(email, user);
-//	    if (updatedUser != null) {
-//	        return ResponseEntity.ok(updatedUser);
-//	    } else {
-//	        return ResponseEntity.notFound().build();
-//	    }
-//	}
-	
+
 	@PutMapping("/update-user")
 	public ResponseEntity<SignUpEntity> updateUserDetails(@RequestBody SignUpEntity user) {
-	    // Extracting the token from the cookie
-	    String token = extractTokenFromCookie(request);
-	    if (token == null) {
-	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
-	    }
+		// Extracting the token from the cookie
+		String token = extractTokenFromCookie(request);
+		if (token == null) {
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
+		}
 
-	    // Decoding the token to get the email
-	    String email = signupservice.decodeJWTAndGetEmail(token);
+		// Decoding the token to get the email
+		String email = signupservice.decodeJWTAndGetEmail(token);
 
-	    // Updating the user details using the email extracted from the token
-	    SignUpEntity updatedUser = signupservice.updateUser(email, user);
-	    if (updatedUser != null) {
-//	        return ResponseEntity.ok(updatedUser);
-	    	SignUpEntity dto = new SignUpEntity();
-	        dto.setfirstName(user.getfirstName());
-	        dto.setlastName(user.getlastName());
-	        dto.setGender(user.getGender());
-	        dto.setphoneNumber(user.getphoneNumber());
-	        dto.setEmail(user.getEmail());
-	        return ResponseEntity.ok(dto);
-	    } else {
-	        return ResponseEntity.notFound().build();
-	    }
+		// Updating the user details using the email extracted from the token
+		SignUpEntity updatedUser = signupservice.updateUser(email, user);
+		if (updatedUser != null) {
+			SignUpEntity dto = new SignUpEntity();
+			dto.setfirstName(user.getfirstName());
+			dto.setlastName(user.getlastName());
+			dto.setGender(user.getGender());
+			dto.setphoneNumber(user.getphoneNumber());
+			dto.setEmail(user.getEmail());
+			return ResponseEntity.ok(dto);
+		} else {
+			return ResponseEntity.notFound().build();
+		}
 	}
 
-	
-//	@PutMapping("/update-address/{email}")
-//	public ResponseEntity<String> updateAddress(@PathVariable String email, @RequestBody AddressUpdateRequest request) {
-//	    try {
-//	        signupservice.updateAddress(email, request);
-//	        return ResponseEntity.ok("Address updated successfully");
-//	    } catch (RuntimeException ex) {
-//	        return ResponseEntity.badRequest().body(ex.getMessage());
-//	    }
-//	}
-	
-//	@PutMapping("/update-address/{email}")
-//    public ResponseEntity<List<Address>> addAddress(@PathVariable String email, @RequestBody Address address) {
-//        try {
-//        	 List<Address> addresses =signupservice.addAddress(email, address);
-//        	 return ResponseEntity.ok(addresses);  // Return the list of addresses
-//        } catch (Exception e) {
-//        	return ResponseEntity.badRequest().body(null);
-//        }
-//    }
-	
 	@PutMapping("/update-address")
 	public ResponseEntity<List<Address>> addAddress(@RequestBody Address address) {
-	    // Extracting the token from the cookie
-	    String token = extractTokenFromCookie(request);
-	    if (token == null) {
-	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
-	    }
+		// Extracting the token from the cookie
+		String token = extractTokenFromCookie(request);
+		if (token == null) {
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
+		}
 
-	    // Decoding the token to get the email
-	    String email = signupservice.decodeJWTAndGetEmail(token);
+		// Decoding the token to get the email
+		String email = signupservice.decodeJWTAndGetEmail(token);
 
-	    // Adding the address using the email extracted from the token
-	    try {
-	        List<Address> addresses = signupservice.addAddress(email, address);
-	        return ResponseEntity.ok(addresses);  // Return the updated list of addresses
-	    } catch (Exception e) {
-	        return ResponseEntity.badRequest().body(null);
-	    }
+		// Adding the address using the email extracted from the token
+		try {
+			List<Address> addresses = signupservice.addAddress(email, address);
+			return ResponseEntity.ok(addresses); // Return the updated list of addresses
+		} catch (Exception e) {
+			return ResponseEntity.badRequest().body(null);
+		}
 	}
 
-	
-//	@PutMapping("/edit-address/{email}/{addressId}")
-//	public ResponseEntity<List<Address>> editAddressByIndex(@PathVariable String email, @PathVariable String addressId, @RequestBody Address address) {
-//	    try {
-//	        List<Address> addresses = signupservice.editAddressById(email, addressId, address);
-//	        return ResponseEntity.ok(addresses);  // Return the list of addresses
-//	    } catch (Exception e) {
-//	        return ResponseEntity.badRequest().body(null);
-//	    }
-//	}
-	
 	@PutMapping("/edit-address/{addressId}")
-	public ResponseEntity<List<Address>> editAddressByIndex(@PathVariable String addressId, @RequestBody Address address) {
-	    // 1. Extract the token from the cookie
-	    String token = extractTokenFromCookie(request);
-	    if (token == null) {
-	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
-	    }
+	public ResponseEntity<List<Address>> editAddressByIndex(@PathVariable String addressId,
+			@RequestBody Address address) {
+		// 1. Extract the token from the cookie
+		String token = extractTokenFromCookie(request);
+		if (token == null) {
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
+		}
 
-	    // 2. Decode the token to get the email
-	    String email;
-	    try {
-	        email = signupservice.decodeJWTAndGetEmail(token);
-	    } catch (RuntimeException e) {
-	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
-	    }
+		// 2. Decode the token to get the email
+		String email;
+		try {
+			email = signupservice.decodeJWTAndGetEmail(token);
+		} catch (RuntimeException e) {
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
+		}
 
-	    // 3. Use that email to edit the address
-	    try {
-	        List<Address> addresses = signupservice.editAddressById(email, addressId, address);
-	        return ResponseEntity.ok(addresses);  // Return the list of addresses
-	    } catch (Exception e) {
-	        return ResponseEntity.badRequest().body(null);
-	    }
+		// 3. Use that email to edit the address
+		try {
+			List<Address> addresses = signupservice.editAddressById(email, addressId, address);
+			return ResponseEntity.ok(addresses); // Return the list of addresses
+		} catch (Exception e) {
+			return ResponseEntity.badRequest().body(null);
+		}
 	}
 
-	
-//	@DeleteMapping("/delete-address/{email}/{addressId}")
-//	public ResponseEntity<List<Address>> deleteAddressById(@PathVariable String email, @PathVariable String addressId) {
-//	    try {
-//	        List<Address> addresses = signupservice.deleteAddressById(email, addressId);
-//	        return ResponseEntity.ok(addresses);  // Return the updated list of addresses
-//	    } catch (Exception e) {
-//	        return ResponseEntity.badRequest().body(null);
-//	    }
-//	}
-	
 	@DeleteMapping("/delete-address/{addressId}")
 	public ResponseEntity<List<Address>> deleteAddressById(@PathVariable String addressId) {
-	    // 1. Extract the token from the cookie
-	    String token = extractTokenFromCookie(request);
-	    if (token == null) {
-	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
-	    }
+		// 1. Extract the token from the cookie
+		String token = extractTokenFromCookie(request);
+		if (token == null) {
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
+		}
 
-	    // 2. Decode the token to get the email
-	    String email;
-	    try {
-	        email = signupservice.decodeJWTAndGetEmail(token);
-	    } catch (RuntimeException e) {
-	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
-	    }
+		// 2. Decode the token to get the email
+		String email;
+		try {
+			email = signupservice.decodeJWTAndGetEmail(token);
+		} catch (RuntimeException e) {
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
+		}
 
-	    // 3. Use that email to delete the address
-	    try {
-	        List<Address> addresses = signupservice.deleteAddressById(email, addressId);
-	        return ResponseEntity.ok(addresses);  // Return the updated list of addresses
-	    } catch (Exception e) {
-	        return ResponseEntity.badRequest().body(null);
-	    }
+		// 3. Use that email to delete the address
+		try {
+			List<Address> addresses = signupservice.deleteAddressById(email, addressId);
+			return ResponseEntity.ok(addresses); // Return the updated list of addresses
+		} catch (Exception e) {
+			return ResponseEntity.badRequest().body(null);
+		}
 	}
 
-
-	
-//	@GetMapping("/get-addresses/{email}")
-//	public ResponseEntity<List<Address>> getAllAddressesByEmail(@PathVariable String email) {
-//	    try {
-//	        List<Address> addresses = signupservice.getAllAddressesByEmail(email);
-//	        return ResponseEntity.ok(addresses);  // Return the list of addresses
-//	    } catch (Exception e) {
-//	        return ResponseEntity.badRequest().body(null);
-//	    }
-//	}
-	
 	@GetMapping("/get-addresses")
 	public ResponseEntity<List<Address>> getAllAddressesByEmail() {
-	    // Extracting the token from the cookie
-	    String token = extractTokenFromCookie(request);
-	    if (token == null) {
-	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
-	    }
+		// Extracting the token from the cookie
+		String token = extractTokenFromCookie(request);
+		if (token == null) {
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
+		}
 
-	    // Decoding the token to get the email
-	    String email = signupservice.decodeJWTAndGetEmail(token);
+		// Decoding the token to get the email
+		String email = signupservice.decodeJWTAndGetEmail(token);
 
-	    // Fetching all addresses using the email extracted from the token
-	    try {
-	        List<Address> addresses = signupservice.getAllAddressesByEmail(email);
-	        return ResponseEntity.ok(addresses);  // Return the list of addresses
-	    } catch (Exception e) {
-	        return ResponseEntity.badRequest().body(null);
-	    }
+		// Fetching all addresses using the email extracted from the token
+		try {
+			List<Address> addresses = signupservice.getAllAddressesByEmail(email);
+			return ResponseEntity.ok(addresses); // Return the list of addresses
+		} catch (Exception e) {
+			return ResponseEntity.badRequest().body(null);
+		}
 	}
 
-	
-//	@PostMapping("/Login")
-//	public ResponseEntity<String> loginUser(@RequestBody SignUpEntity userCredentials,) {
-//	    boolean isValid = signupservice.validateLogin(userCredentials.getEmail(), userCredentials.getPassword());
-//	    if (isValid) {
-//	        return ResponseEntity.ok("Login successful");
-//	    } else {
-//	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid email or password");
-//	    }
-//	}
-	
-//	@PostMapping("/Login")
-//	public ResponseEntity<String> loginUser(@RequestBody SignUpEntity userCredentials, HttpServletResponse response) {
-//	    boolean isValid = signupservice.validateLogin(userCredentials.getEmail(), userCredentials.getPassword());
-//	    if (isValid) {
-//	        String token = signupservice.getTokenForUser(userCredentials.getEmail()); // get the token for the user
-//	        Cookie jwtCookie = new Cookie("jwt-token", token);  // create a cookie with the token
-//	        jwtCookie.setHttpOnly(true);
-//	        jwtCookie.setMaxAge(2 * 24 * 60 * 60);  // setting the cookie for 7 days
-//	        response.addCookie(jwtCookie);  // add the cookie to the response
-//	        return ResponseEntity.ok("Login successful");
-//	    } else {
-//	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid email or password");
-//	    }
-//	}
-	
-	@PostMapping("/Login")
-	public ResponseEntity<ResponseMessage> loginUser(@RequestBody SignUpEntity userCredentials, HttpServletResponse response) {
-	    boolean isValid = signupservice.validateLogin(userCredentials.getEmail(), userCredentials.getPassword());
-	    if (isValid) {
-	        String token = signupservice.getTokenForUser(userCredentials.getEmail());
-	        Cookie jwtCookie = new Cookie("jwt-token", token);
-	        jwtCookie.setHttpOnly(true);
-	        jwtCookie.setMaxAge(2 * 24 * 60 * 60); 
-	        response.addCookie(jwtCookie);  
+	@PostMapping("/login")
+	public ResponseEntity<ResponseMessage> loginUser(@RequestBody SignUpEntity userCredentials,
+			HttpServletResponse response) {
+		boolean isValid = signupservice.validateLogin(userCredentials.getEmail(), userCredentials.getPassword());
+		if (isValid) {
+			String token = signupservice.getTokenForUser(userCredentials.getEmail());
+			Cookie jwtCookie = new Cookie("jwt-token", token);
+			jwtCookie.setHttpOnly(true);
+			jwtCookie.setMaxAge(1 * 24 * 60 * 60);
+			response.addCookie(jwtCookie);
 
-	        return new ResponseEntity<>(new ResponseMessage("Login successful"), HttpStatus.OK);
-	    } else {
-	        return new ResponseEntity<>(new ResponseMessage("Invalid email or password"), HttpStatus.UNAUTHORIZED);
-	    }
+			return new ResponseEntity<>(new ResponseMessage("Login successful"), HttpStatus.OK);
+		} else {
+			return new ResponseEntity<>(new ResponseMessage("Invalid email or password"), HttpStatus.UNAUTHORIZED);
+		}
 	}
 
-	
-	
-//	@DeleteMapping("/logout")
-//	public ResponseEntity<String> logoutUser(@RequestBody SignUpEntity userCredentials) {
-//	    try {
-//	        signupservice.logoutUser(userCredentials.getEmail());
-//	        return ResponseEntity.ok("Logout successful");
-//	    } catch (Exception e) {
-//	        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Error during logout: " + e.getMessage());
-//	    }
-//	}
-	
-//	@DeleteMapping("/logout")
-//	public ResponseEntity<String> logoutUser() {
-//	    try {
-//	        // Getting the JWT token cookie
-//	        Cookie[] cookies = request.getCookies();
-//	        Cookie jwtCookie = null;
-//	        if (cookies != null) {
-//	            for (Cookie cookie : cookies) {
-//	                if ("jwt-token".equals(cookie.getName())) {
-//	                    jwtCookie = cookie;
-//	                    break;
-//	                }
-//	            }
-//	        }
-//
-//	        // If the JWT token cookie exists, we "delete" it by setting its max age to 0
-//	        if (jwtCookie != null) {
-//	            jwtCookie.setMaxAge(0);
-//	            jwtCookie.setPath("/onlinelearning");  // Ensure you're setting the path, especially if you set it when creating the cookie
-//	            ((HttpServletResponse) response).addCookie(jwtCookie);
-//	        }
-//
-//	        // Return the logout success message
-//	        return ResponseEntity.ok("Logout successful");
-//	    } catch (Exception e) {
-//	        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Error during logout: " + e.getMessage());
-//	    }
-//	}
-	
 	@DeleteMapping("/logout")
 	public ResponseEntity<ResponseMessage> logoutUser() {
-	    try {
-	        // Getting the JWT token cookie
-	        Cookie[] cookies = request.getCookies();
-	        Cookie jwtCookie = null;
-	        if (cookies != null) {
-	            for (Cookie cookie : cookies) {
-	                if ("jwt-token".equals(cookie.getName())) {
-	                    jwtCookie = cookie;
-	                    break;
-	                }
-	            }
-	        }
+		try {
+			// Getting the JWT token cookie
+			Cookie[] cookies = request.getCookies();
+			Cookie jwtCookie = null;
+			if (cookies != null) {
+				for (Cookie cookie : cookies) {
+					if ("jwt-token".equals(cookie.getName())) {
+						jwtCookie = cookie;
+						break;
+					}
+				}
+			}
 
-	        // If the JWT token cookie exists, we "delete" it by setting its max age to 0
-	        if (jwtCookie != null) {
-	            jwtCookie.setMaxAge(0);
-	            jwtCookie.setPath("/onlinelearning");  
-	            ((HttpServletResponse) response).addCookie(jwtCookie);
-	        }
+			// If the JWT token cookie exists, we "delete" it by setting its max age to 0
+			if (jwtCookie != null) {
+				jwtCookie.setMaxAge(0);
+				jwtCookie.setPath("/onlinelearning");
+				((HttpServletResponse) response).addCookie(jwtCookie);
+			}
 
-	        return new ResponseEntity<>(new ResponseMessage("Logout successful"), HttpStatus.OK);
-	    } catch (Exception e) {
-	        return new ResponseEntity<>(new ResponseMessage("Error during logout: " + e.getMessage()), HttpStatus.BAD_REQUEST);
-	    }
+			return new ResponseEntity<>(new ResponseMessage("Logout successful"), HttpStatus.OK);
+		} catch (Exception e) {
+			return new ResponseEntity<>(new ResponseMessage("Error during logout: " + e.getMessage()),
+					HttpStatus.BAD_REQUEST);
+		}
 	}
 
+	// Local JWT token API'S
 
+	// login API with JWT token local variable
+	@PostMapping("/Login")
+	public ResponseEntity<ResponseMessageWithToken> loginUser(@RequestBody SignUpEntity userCredentials) {
+		boolean isValid = signupservice.validateLogin(userCredentials.getEmail(), userCredentials.getPassword());
+		if (isValid) {
+			String token = signupservice.getTokenForUser(userCredentials.getEmail());
+			return new ResponseEntity<>(new ResponseMessageWithToken("Login successfully", token), HttpStatus.OK);
+		} else {
+			return new ResponseEntity<>(new ResponseMessageWithToken("Invalid email or password", null),
+					HttpStatus.UNAUTHORIZED);
+		}
+	}
+
+	// Get-addresses API with JWT token local variable
+	@GetMapping("/Get-addresses/{token}")
+	public ResponseEntity<ResponseMessageWithToken> getAllAddressesByToken(@PathVariable String token) {
+		try {
+			// 1. Decode the token to get the email
+			String email = signupservice.decodeJWTAndGetEmail(token);
+
+			// 2. Fetch all addresses using the email decoded from the token
+			List<Address> addresses = signupservice.getAllAddressesByEmail(email);
+
+			ResponseMessageWithToken response = new ResponseMessageWithToken(addresses,
+					"User address fetched successfully");
+			return ResponseEntity.ok(response);
+		} catch (Exception e) {
+			return ResponseEntity.badRequest().body(null);
+		}
+	}
+
+	// Delete-address API with JWT token local variable
+	@DeleteMapping("/Delete-address/{token}/{addressId}")
+	public ResponseEntity<ResponseMessageWithToken> deleteAddressByToken(@PathVariable String token,
+			@PathVariable String addressId) {
+		try {
+			// 1. Decode the token to get the email
+			String email = signupservice.decodeJWTAndGetEmail(token);
+
+			// 2. Use the email to delete the address by addressId
+			List<Address> remainingAddresses = signupservice.deleteAddressById(email, addressId);
+
+			ResponseMessageWithToken response = new ResponseMessageWithToken(remainingAddresses,
+					"User address deleted successfully");
+			return ResponseEntity.ok(response);
+		} catch (Exception e) {
+			return ResponseEntity.badRequest().body(null);
+		}
+	}
+
+	// Edit-address API with JWT token local variable
+	@PutMapping("/Edit-address/{token}/{addressId}")
+	public ResponseEntity<ResponseMessageWithToken> editAddressByToken(@PathVariable String token,
+			@PathVariable String addressId, @RequestBody Address address) {
+		try {
+			// 1. Decode the token to get the email
+			String email = signupservice.decodeJWTAndGetEmail(token);
+
+			// 2. Use the email to edit the address
+			List<Address> addresses = signupservice.editAddressById(email, addressId, address);
+
+			ResponseMessageWithToken response = new ResponseMessageWithToken(addresses,
+					"User address edited successfully");
+			return ResponseEntity.ok(response);
+		} catch (Exception e) {
+			return ResponseEntity.badRequest().body(null);
+		}
+	}
+
+	// Update-address API with JWT token local variable
+	@PutMapping("/Update-address/{token}")
+	public ResponseEntity<ResponseMessageWithToken> updateAddressByToken(@PathVariable String token,
+			@RequestBody Address address) {
+		try {
+			// 1. Decode the token to get the email
+			String email = signupservice.decodeJWTAndGetEmail(token);
+
+			// 2. Add the address using the email extracted from the token
+			List<Address> updatedAddresses = signupservice.addAddress(email, address);
+
+			ResponseMessageWithToken response = new ResponseMessageWithToken(updatedAddresses,
+					"User address updated successfully");
+			return ResponseEntity.ok(response);
+		} catch (Exception e) {
+			return ResponseEntity.badRequest().body(null);
+		}
+	}
+
+	// Update-user API with JWT token local variable
+	@PutMapping("/Update-user/{token}")
+	public ResponseEntity<ResponseMessageWithToken> updateUserDetailsByToken(@PathVariable String token,
+			@RequestBody SignUpEntity updatedUser) {
+		try {
+			// 1. Decode the token to get the email
+			String email = signupservice.decodeJWTAndGetEmail(token);
+
+			// 2. Update the user details using the email extracted from the token
+			SignUpEntity existingUser = signupservice.updateUser(email, updatedUser);
+
+			if (existingUser != null) {
+				SignUpEntity dto = new SignUpEntity();
+				dto.setfirstName(existingUser.getfirstName());
+				dto.setlastName(existingUser.getlastName());
+				dto.setGender(existingUser.getGender());
+				dto.setphoneNumber(existingUser.getphoneNumber());
+				dto.setEmail(existingUser.getEmail());
+				ResponseMessageWithToken response = new ResponseMessageWithToken(dto, "User updated successfully");
+				return ResponseEntity.ok(response);
+			} else {
+				return ResponseEntity.notFound().build();
+			}
+
+		} catch (Exception e) {
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+		}
+	}
+
+	// user-details API with JWT token local variable
+	@GetMapping("/User-details/{token}")
+	public ResponseEntity<ResponseMessageWithToken> getUserDetailsByToken(@PathVariable String token) {
+		try {
+			// 1. Decode the token to get the email
+			String email = signupservice.decodeJWTAndGetEmail(token);
+
+			// 2. Fetch user details from the database using the extracted email
+			SignUpEntity user = signupRepo.findByEmail(email);
+
+			if (user != null) {
+				SignUpEntity dto = new SignUpEntity();
+				dto.setfirstName(user.getfirstName());
+				dto.setlastName(user.getlastName());
+				dto.setGender(user.getGender());
+				dto.setphoneNumber(user.getphoneNumber());
+				dto.setEmail(user.getEmail());
+				ResponseMessageWithToken response = new ResponseMessageWithToken(dto,
+						"User details fetched successfully");
+				return ResponseEntity.ok(response);
+			} else {
+				return ResponseEntity.notFound().build();
+			}
+
+		} catch (Exception e) {
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+		}
+	}
+
+	// Delete API with JWT token local variable
+	@DeleteMapping("/Delete-user/{token}")
+	public ResponseEntity<ResponseMessageWithToken> deleteUserByToken(@PathVariable String token) {
+		try {
+			// 1. Decode the token to get the email
+			String email = signupservice.decodeJWTAndGetEmail(token);
+
+			// 2. Delete the user from the database using the extracted email
+			signupservice.deleteUserByEmail(email);
+
+			ResponseMessageWithToken response = new ResponseMessageWithToken("User account deleted successfully");
+			return ResponseEntity.ok(response);
+		} catch (Exception e) {
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+					.body(new ResponseMessageWithToken("Error during deletion: " + e.getMessage()));
+		}
+	}
 
 }
