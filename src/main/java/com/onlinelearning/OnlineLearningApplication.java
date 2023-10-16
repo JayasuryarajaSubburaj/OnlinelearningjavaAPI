@@ -16,11 +16,11 @@ public class OnlineLearningApplication {
 		SpringApplication.run(OnlineLearningApplication.class, args);
 	}
 
-	@Bean
-	public ExecutorService executorService() {
-		return Executors.newFixedThreadPool(8);
-	}
-
+//	@Bean
+//	public ExecutorService executorService() {
+//		return Executors.newFixedThreadPool(8);
+//	}
+//
 	@Bean
 	public ThreadPoolExecutor threadPoolExecutor() {
 		return (ThreadPoolExecutor) Executors.newFixedThreadPool(8);

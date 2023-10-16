@@ -1,13 +1,12 @@
 package com.onlinelearning.controller;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadPoolExecutor;
-import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -26,6 +25,10 @@ import com.onlinelearning.entity.ResponseMessageWithToken;
 import com.onlinelearning.entity.SignUpEntity;
 import com.onlinelearning.entity.SignUpEntity.Address;
 import com.onlinelearning.repo.SignUpRepository;
+import com.onlinelearning.service.DeleteUserTask;
+import com.onlinelearning.service.FetchUserDetailsTask;
+import com.onlinelearning.service.GetAddressesTask;
+import com.onlinelearning.service.LoginTask;
 import com.onlinelearning.service.SignUpService;
 import com.onlinelearning.service.SignUpServiceImplement;
 import com.onlinelearning.service.SignUpTask;
@@ -46,6 +49,9 @@ public class SignUpController {
 
 	@Autowired
 	SignUpServiceImplement signUpService1;
+	
+	@Autowired
+	SignUpServiceImplement loginService1;
 
 	@Autowired
 	HttpServletRequest request; // Autowire HttpServletRequest to access cookies
@@ -53,8 +59,8 @@ public class SignUpController {
 	@Autowired
 	HttpServletResponse response;
 
-	@Autowired
-	private ExecutorService executorService; // Assuming you've created a bean for this, shown later
+//	@Autowired
+//	private ExecutorService executorService; // Assuming you've created a bean for this, shown later
 
 	@Autowired
 	private ThreadPoolExecutor threadPoolExecutor;
@@ -72,155 +78,87 @@ public class SignUpController {
 //		}
 //	}
 
-//	@PostMapping("/signup")
-//	public ResponseEntity<List<ResponseMessage>> createUsers(@RequestBody List<SignUpEntity> signUpEntities) {
-//	    
-//		 // Check if we have too many active tasks
-//	    if (threadPoolExecutor.getActiveCount() <= 8) {
-//	        return new ResponseEntity<>(Collections.singletonList(new ResponseMessage("Server is busy. Try again later.")), HttpStatus.SERVICE_UNAVAILABLE);
-//	    }
-//		
-//	    List<Callable<String>> tasks = new ArrayList<>();
-//	    for (SignUpEntity signEnt : signUpEntities) {
-//	        tasks.add(new SignUpTask(signEnt, signUpService1));
-//	    }
-//
-//	    List<ResponseMessage> responses;
-//	    try {
-//	        responses = threadPoolExecutor.invokeAll(tasks).stream()
-//	            .map(future -> {
-//	                try {
-//	                    return new ResponseMessage(future.get());
-//	                } catch (Exception e) {
-//	                    return new ResponseMessage("Error occurred");
-//	                }
-//	            })
-//	            .collect(Collectors.toList());
-//	    } catch (InterruptedException e) {
-//	        return new ResponseEntity<>(Collections.singletonList(new ResponseMessage("Error processing requests")), HttpStatus.INTERNAL_SERVER_ERROR);
-//	    }
-//
-//	    return new ResponseEntity<>(responses, HttpStatus.CREATED);
-//	}
-
-//	@PostMapping("/signup")
-//	public ResponseEntity<List<ResponseMessage>> createUsers(@RequestBody List<SignUpEntity> signUpEntities) {
-//
-//		// Try acquiring a permit for each user. If unsuccessful for any user, return a
-//		// service unavailable response.
-//		int requiredPermits = signUpEntities.size();
-//		if (!semaphore.tryAcquire(requiredPermits)) {
-//			return new ResponseEntity<>(
-//					Collections.singletonList(new ResponseMessage("Server is busy. Try again later.")),
-//					HttpStatus.SERVICE_UNAVAILABLE);
-//		}
-//
-//		try {
-//			List<Callable<String>> tasks = new ArrayList<>();
-//			for (SignUpEntity signEnt : signUpEntities) {
-//				tasks.add(new SignUpTask(signEnt, signUpService1));
-//			}
-//
-//			List<ResponseMessage> responses = threadPoolExecutor.invokeAll(tasks).stream().map(future -> {
-//				try {
-//					return new ResponseMessage(future.get());
-//				} catch (Exception e) {
-//					return new ResponseMessage("Error occurred");
-//				}
-//			}).collect(Collectors.toList());
-//
-//			return new ResponseEntity<>(responses, HttpStatus.CREATED);
-//		} catch (InterruptedException e) {
-//			return new ResponseEntity<>(Collections.singletonList(new ResponseMessage("Error processing requests")),
-//					HttpStatus.INTERNAL_SERVER_ERROR);
-//		} finally {
-//			semaphore.release(requiredPermits); // Always release the permits
-//		}
-//	}
-	
-//	@PostMapping("/signup")
-//	public ResponseEntity<List<ResponseMessage>> createUsers(@RequestBody List<SignUpEntity> signUpEntities) {
-//
-//	    // Check the number of users in the request and determine if there are enough permits
-//	    int usersToProcess = signUpEntities.size();
-//	    if (!semaphore.tryAcquire(usersToProcess)) {
-//	        return new ResponseEntity<>(
-//	                Collections.singletonList(new ResponseMessage("Server is busy. Please try again later.")),
-//	                HttpStatus.SERVICE_UNAVAILABLE);
-//	    }
-//
-//	    try {
-//	        // Limit to only process the first 8 users (or less if the list is smaller)
-//	        int allowableUsers = Math.min(usersToProcess, 8);
-//	        signUpEntities = signUpEntities.subList(0, allowableUsers);
-//
-//	        List<Callable<String>> tasks = signUpEntities.stream()
-//	                .map(signEnt -> new SignUpTask(signEnt, signUpService1))
-//	                .collect(Collectors.toList());
-//
-//	        List<ResponseMessage> responses = threadPoolExecutor.invokeAll(tasks).stream()
-//	                .map(future -> {
-//	                    try {
-//	                        return new ResponseMessage(future.get());
-//	                    } catch (Exception e) {
-//	                        return new ResponseMessage("Error occurred: " + e.getMessage());
-//	                    }
-//	                })
-//	                .collect(Collectors.toList());
-//
-//	        return new ResponseEntity<>(responses, HttpStatus.CREATED);
-//	    } catch (InterruptedException e) {
-//	        return new ResponseEntity<>(
-//	                Collections.singletonList(new ResponseMessage("Error processing the requests.")),
-//	                HttpStatus.INTERNAL_SERVER_ERROR);
-//	    } finally {
-//	        // Always release the acquired permits
-//	        semaphore.release(usersToProcess);
-//	    }
-//	}
-	
 	@PostMapping("/signup")
 	public ResponseEntity<ResponseMessage> createUser(@RequestBody SignUpEntity signUpEntity) {
+		synchronized (this) {
+			if (!semaphore.tryAcquire()) {
+				System.out.println("Rejected a user because all permits are in use.");
+				return new ResponseEntity<>(new ResponseMessage("Server is busy. Please try again later."),
+						HttpStatus.SERVICE_UNAVAILABLE);
+			}
+		}
 
-	    // Check if there's an available permit
-	    if (!semaphore.tryAcquire()) {
-	        return new ResponseEntity<>(
-	                new ResponseMessage("Server is busy. Please try again later."),
-	                HttpStatus.SERVICE_UNAVAILABLE);
-	    }
-
-	    try {
-	        Callable<String> task = new SignUpTask(signUpEntity, signUpService1);
-	        String responseMessage = threadPoolExecutor.submit(task).get();
-
-	        return new ResponseEntity<>(new ResponseMessage(responseMessage), HttpStatus.CREATED);
-	    } catch (Exception e) {
-	        return new ResponseEntity<>(
-	                new ResponseMessage("Error occurred: " + e.getMessage()),
-	                HttpStatus.INTERNAL_SERVER_ERROR);
-	    } finally {
-	        // Always release the acquired permit
-	        semaphore.release();
-	    }
+		try {
+			Callable<String> task = new SignUpTask(signUpEntity, signUpService1);
+			String responseMessage = threadPoolExecutor.submit(task).get();
+			return new ResponseEntity<>(new ResponseMessage(responseMessage), HttpStatus.CREATED);
+		} catch (RejectedExecutionException ree) {
+			System.out.println("Rejected by ThreadPoolExecutor: " + ree.getMessage());
+			return new ResponseEntity<>(
+					new ResponseMessage(
+							"Server is currently processing maximum number of requests. Please try again later."),
+					HttpStatus.SERVICE_UNAVAILABLE);
+		} catch (ExecutionException ee) {
+			System.out.println("Execution exception: " + ee.getCause().getMessage());
+			return new ResponseEntity<>(new ResponseMessage("Error processing signup: " + ee.getCause().getMessage()),
+					HttpStatus.INTERNAL_SERVER_ERROR);
+		} catch (InterruptedException ie) {
+			Thread.currentThread().interrupt(); // Preserve the interrupt status
+			return new ResponseEntity<>(new ResponseMessage("Signup processing was interrupted. Please try again."),
+					HttpStatus.INTERNAL_SERVER_ERROR);
+		} finally {
+			semaphore.release();
+		}
 	}
 
-
-
+//	@DeleteMapping("/delete-user")
+//	public ResponseEntity<String> deleteUserByEmail() {
+//		String token = extractTokenFromCookie(request);
+//		if (token == null) {
+//			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("No JWT token found in the cookie.");
+//		}
+//		String email = signupservice.decodeJWTAndGetEmail(token);
+//		// Deleting the user details using the email extracted from the token
+//		try {
+//			signupservice.deleteUserByEmail(email);
+//			return ResponseEntity.ok("Your account has been deleted");
+//		} catch (Exception e) {
+//			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Error during deletion: " + e.getMessage());
+//		}
+//
+//	}
+	
 	@DeleteMapping("/delete-user")
 	public ResponseEntity<String> deleteUserByEmail() {
-		String token = extractTokenFromCookie(request);
-		if (token == null) {
-			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("No JWT token found in the cookie.");
-		}
-		String email = signupservice.decodeJWTAndGetEmail(token);
-		// Deleting the user details using the email extracted from the token
-		try {
-			signupservice.deleteUserByEmail(email);
-			return ResponseEntity.ok("Your account has been deleted");
-		} catch (Exception e) {
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Error during deletion: " + e.getMessage());
-		}
+	    String token = extractTokenFromCookie(request);
+	    if (token == null) {
+	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("No JWT token found in the cookie.");
+	    }
+	    String email = signupservice.decodeJWTAndGetEmail(token);
 
+	    try {
+	        Callable<Boolean> task = new DeleteUserTask(email, signUpService1);
+	        boolean result = threadPoolExecutor.submit(task).get();
+
+	        if(result) {
+	            return ResponseEntity.ok("Your account has been deleted");
+	        } else {
+	            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Error during deletion");
+	        }
+	        
+	    } catch (RejectedExecutionException ree) {
+	        System.out.println("Rejected by ThreadPoolExecutor: " + ree.getMessage());
+	        return new ResponseEntity<>(
+	                "Server is currently processing maximum number of requests. Please try again later.",
+	                HttpStatus.SERVICE_UNAVAILABLE
+	        );
+	    } catch (ExecutionException ee) {
+	        System.out.println("Execution exception: " + ee.getCause().getMessage());
+	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error processing deletion");
+	    } catch (InterruptedException ie) {
+	        Thread.currentThread().interrupt(); // Preserve the interrupt status
+	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Deletion processing was interrupted. Please try again.");
+	    }
 	}
 
 	public String extractTokenFromCookie(HttpServletRequest request) {
@@ -235,25 +173,61 @@ public class SignUpController {
 		return null;
 	}
 
+//	@GetMapping("/user-details")
+//	public ResponseEntity<SignUpEntity> getUserByEmail() {
+//		String token = extractTokenFromCookie(request);
+//		if (token == null) {
+//			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
+//		}
+//		String email = signupservice.decodeJWTAndGetEmail(token);
+//		SignUpEntity user = signupRepo.findByEmail(email);
+//		if (user != null) {
+//			SignUpEntity dto = new SignUpEntity();
+//			dto.setfirstName(user.getfirstName());
+//			dto.setlastName(user.getlastName());
+//			dto.setGender(user.getGender());
+//			dto.setphoneNumber(user.getphoneNumber());
+//			dto.setEmail(user.getEmail());
+//			return ResponseEntity.ok(dto);
+//		} else {
+//			return ResponseEntity.notFound().build();
+//		}
+//	}
+	
 	@GetMapping("/user-details")
 	public ResponseEntity<SignUpEntity> getUserByEmail() {
-		String token = extractTokenFromCookie(request);
-		if (token == null) {
-			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
-		}
-		String email = signupservice.decodeJWTAndGetEmail(token);
-		SignUpEntity user = signupRepo.findByEmail(email);
-		if (user != null) {
-			SignUpEntity dto = new SignUpEntity();
-			dto.setfirstName(user.getfirstName());
-			dto.setlastName(user.getlastName());
-			dto.setGender(user.getGender());
-			dto.setphoneNumber(user.getphoneNumber());
-			dto.setEmail(user.getEmail());
-			return ResponseEntity.ok(dto);
-		} else {
-			return ResponseEntity.notFound().build();
-		}
+	    String token = extractTokenFromCookie(request);
+	    if (token == null) {
+	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
+	    }
+	    String email = signupservice.decodeJWTAndGetEmail(token);
+
+	    try {
+	        Callable<SignUpEntity> task = new FetchUserDetailsTask(email, signUpService1);
+	        SignUpEntity user = threadPoolExecutor.submit(task).get();
+
+	        if (user != null) {
+	            SignUpEntity dto = new SignUpEntity();
+	            dto.setfirstName(user.getfirstName());
+	            dto.setlastName(user.getlastName());
+	            dto.setGender(user.getGender());
+	            dto.setphoneNumber(user.getphoneNumber());
+	            dto.setEmail(user.getEmail());
+	            return ResponseEntity.ok(dto);
+	        } else {
+	            return ResponseEntity.notFound().build();
+	        }
+	        
+	    } catch (RejectedExecutionException ree) {
+	        System.out.println("Rejected by ThreadPoolExecutor: " + ree.getMessage());
+	        return new ResponseEntity<>("Server is currently processing maximum number of requests. Please try again later.",HttpStatus.SERVICE_UNAVAILABLE);
+	    } catch (ExecutionException ee) {
+	        System.out.println("Execution exception: " + ee.getCause().getMessage());
+	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+	    } catch (InterruptedException ie) {
+	        Thread.currentThread().interrupt(); // Preserve the interrupt status
+	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+	    }
 	}
 
 	@PutMapping("/update-user")
@@ -353,42 +327,108 @@ public class SignUpController {
 		}
 	}
 
+//	@GetMapping("/get-addresses")
+//	public ResponseEntity<List<Address>> getAllAddressesByEmail() {
+//		// Extracting the token from the cookie
+//		String token = extractTokenFromCookie(request);
+//		if (token == null) {
+//			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
+//		}
+//
+//		// Decoding the token to get the email
+//		String email = signupservice.decodeJWTAndGetEmail(token);
+//
+//		// Fetching all addresses using the email extracted from the token
+//		try {
+//			List<Address> addresses = signupservice.getAllAddressesByEmail(email);
+//			return ResponseEntity.ok(addresses); // Return the list of addresses
+//		} catch (Exception e) {
+//			return ResponseEntity.badRequest().body(null);
+//		}
+//	}
+	
 	@GetMapping("/get-addresses")
 	public ResponseEntity<List<Address>> getAllAddressesByEmail() {
-		// Extracting the token from the cookie
-		String token = extractTokenFromCookie(request);
-		if (token == null) {
-			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
-		}
+	    String token = extractTokenFromCookie(request);
+	    if (token == null) {
+	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
+	    }
 
-		// Decoding the token to get the email
-		String email = signupservice.decodeJWTAndGetEmail(token);
+	    String email = signupservice.decodeJWTAndGetEmail(token);
 
-		// Fetching all addresses using the email extracted from the token
-		try {
-			List<Address> addresses = signupservice.getAllAddressesByEmail(email);
-			return ResponseEntity.ok(addresses); // Return the list of addresses
-		} catch (Exception e) {
-			return ResponseEntity.badRequest().body(null);
-		}
+	    try {
+	        Callable<List<Address>> task = new GetAddressesTask(email, signUpService1);
+	        List<Address> addresses = threadPoolExecutor.submit(task).get();
+	        return ResponseEntity.ok(addresses); // Return the list of addresses
+	    } catch (RejectedExecutionException ree) {
+	        System.out.println("Rejected by ThreadPoolExecutor: " + ree.getMessage());
+	        return new ResponseEntity<>(
+	                new ArrayList<>(),
+	                HttpStatus.SERVICE_UNAVAILABLE
+	        );
+	    } catch (ExecutionException ee) {
+	        System.out.println("Execution exception: " + ee.getCause().getMessage());
+	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+	    } catch (InterruptedException ie) {
+	        Thread.currentThread().interrupt(); // Preserve the interrupt status
+	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+	    }
 	}
+
+//	@PostMapping("/login")
+//	public ResponseEntity<ResponseMessage> loginUser(@RequestBody SignUpEntity userCredentials,
+//			HttpServletResponse response) {
+//		boolean isValid = signupservice.validateLogin(userCredentials.getEmail(), userCredentials.getPassword());
+//		if (isValid) {
+//			String token = signupservice.getTokenForUser(userCredentials.getEmail());
+//			Cookie jwtCookie = new Cookie("jwt-token", token);
+//			jwtCookie.setHttpOnly(true);
+//			jwtCookie.setMaxAge(1 * 24 * 60 * 60);
+//			response.addCookie(jwtCookie);
+//
+//			return new ResponseEntity<>(new ResponseMessage("Login successful"), HttpStatus.OK);
+//		} else {
+//			return new ResponseEntity<>(new ResponseMessage("Invalid email or password"), HttpStatus.UNAUTHORIZED);
+//		}
+//	}
 
 	@PostMapping("/login")
-	public ResponseEntity<ResponseMessage> loginUser(@RequestBody SignUpEntity userCredentials,
-			HttpServletResponse response) {
-		boolean isValid = signupservice.validateLogin(userCredentials.getEmail(), userCredentials.getPassword());
-		if (isValid) {
-			String token = signupservice.getTokenForUser(userCredentials.getEmail());
-			Cookie jwtCookie = new Cookie("jwt-token", token);
-			jwtCookie.setHttpOnly(true);
-			jwtCookie.setMaxAge(1 * 24 * 60 * 60);
-			response.addCookie(jwtCookie);
+	public ResponseEntity<ResponseMessage> loginUser(@RequestBody SignUpEntity userCredentials, HttpServletResponse response) {
+		synchronized (this) {
+			if (!semaphore.tryAcquire()) {
+				System.out.println("Rejected a user login because all permits are in use.");
+				return new ResponseEntity<>(new ResponseMessage("Server is busy. Please try again later."), HttpStatus.SERVICE_UNAVAILABLE);
+			}
+		}
 
-			return new ResponseEntity<>(new ResponseMessage("Login successful"), HttpStatus.OK);
-		} else {
-			return new ResponseEntity<>(new ResponseMessage("Invalid email or password"), HttpStatus.UNAUTHORIZED);
+		try {
+			Callable<Boolean> task = new LoginTask(userCredentials, signUpService1);
+			boolean isValid = threadPoolExecutor.submit(task).get();
+
+			if (isValid) {
+				String token = signUpService1.getTokenForUser(userCredentials.getEmail());
+				Cookie jwtCookie = new Cookie("jwt-token", token);
+				jwtCookie.setHttpOnly(true);
+				jwtCookie.setMaxAge(1 * 24 * 60 * 60);
+				response.addCookie(jwtCookie);
+				return new ResponseEntity<>(new ResponseMessage("Login successful"), HttpStatus.OK);
+			} else {
+				return new ResponseEntity<>(new ResponseMessage("Invalid email or password"), HttpStatus.UNAUTHORIZED);
+			}
+		} catch (RejectedExecutionException ree) {
+			System.out.println("Rejected by ThreadPoolExecutor: " + ree.getMessage());
+			return new ResponseEntity<>(new ResponseMessage("Server is currently processing maximum number of requests. Please try again later."), HttpStatus.SERVICE_UNAVAILABLE);
+		} catch (ExecutionException ee) {
+			System.out.println("Execution exception: " + ee.getCause().getMessage());
+			return new ResponseEntity<>(new ResponseMessage("Error processing login: " + ee.getCause().getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+		} catch (InterruptedException ie) {
+			Thread.currentThread().interrupt(); // Preserve the interrupt status
+			return new ResponseEntity<>(new ResponseMessage("Login processing was interrupted. Please try again."), HttpStatus.INTERNAL_SERVER_ERROR);
+		} finally {
+			semaphore.release();
 		}
 	}
+
 
 	@DeleteMapping("/logout")
 	public ResponseEntity<ResponseMessage> logoutUser() {
