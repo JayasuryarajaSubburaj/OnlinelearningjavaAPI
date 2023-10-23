@@ -30,5 +30,15 @@ public class OnlineLearningApplication {
 	public Semaphore semaphore() {
 		return new Semaphore(8); // 8 permits
 	}
+	
+	@Bean(name = "loginThreadPoolExecutor")
+	public ThreadPoolExecutor loginThreadPoolExecutor() {
+	    return (ThreadPoolExecutor) Executors.newFixedThreadPool(1);  // assuming 1 threads for login
+	}
+
+	@Bean(name = "otherThreadPoolExecutor")
+	public ThreadPoolExecutor otherThreadPoolExecutor() {
+	    return (ThreadPoolExecutor) Executors.newFixedThreadPool(7);  // assuming 7 threads for others
+	}
 
 }

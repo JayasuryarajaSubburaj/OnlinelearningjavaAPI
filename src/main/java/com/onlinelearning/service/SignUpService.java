@@ -24,6 +24,10 @@ public interface SignUpService {
 	
 	List<Address> getAllAddressesByEmail(String email);
 	
+	//Original login
+//	boolean validateLogin(String email, String password);
+	
+	//Arun useremail,userpassword
 	boolean validateLogin(String email, String password);
 	
 	String getTokenForUser(String email);

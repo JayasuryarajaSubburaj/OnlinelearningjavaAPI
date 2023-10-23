@@ -3,19 +3,25 @@ package com.onlinelearning.service;
 import java.util.concurrent.Callable;
 
 import com.onlinelearning.entity.SignUpEntity;
+import com.onlinelearning.repo.SignUpRepository;
 
 public class FetchUserDetailsTask implements Callable<SignUpEntity> {
 
     private String email;
-    private SignUpServiceImplement signUpService1;
+    private SignUpRepository signUpRepository;
 
-    public FetchUserDetailsTask(String email, SignUpServiceImplement signUpService1) {
+    public FetchUserDetailsTask(String email, SignUpRepository signUpRepository) {
         this.email = email;
-        this.signUpService1 = signUpService1;
+        this.signUpRepository = signUpRepository;
     }
 
+//    @Override
+//    public SignUpEntity call() {
+//        return signUpService1.updateUser(email, null);
+//    }
+    
     @Override
     public SignUpEntity call() {
-        return signUpService1.updateUser(email, null);
+        return signUpRepository.findByEmail(email);
     }
 }

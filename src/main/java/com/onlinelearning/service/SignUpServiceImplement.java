@@ -164,7 +164,7 @@ public class SignUpServiceImplement implements SignUpService {
 			log.setEmail(email);
 			log.setLoginTimestamp(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
 //	            log.setJwtToken(token); // Set the JWT token
-			loginLogRepo.save(log);
+			//loginLogRepo.save(log);
 
 			return true; // Login successful
 		}
