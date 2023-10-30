@@ -14,14 +14,14 @@ public class LoginTask implements Callable<Boolean> {
 		this.loginService = loginService;
 	}
 
-	@Override
-	public Boolean call() {
-		return loginService.validateLogin(userCredentials.getEmail(), userCredentials.getPassword());
-	}
-	
 //	@Override
 //	public Boolean call() {
-//		return loginService.validateLogin(userCredentials.getUserEmail(), userCredentials.getUserPassword());
+//		return loginService.validateLogin(userCredentials.getEmail(), userCredentials.getPassword());
 //	}
+	
+	@Override
+	public Boolean call() {
+		return loginService.validateLogin(userCredentials.getUserEmail(), userCredentials.getUserPassword());
+	}
 
 }

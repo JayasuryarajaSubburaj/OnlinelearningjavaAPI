@@ -91,6 +91,11 @@ public class SignUpController {
 //			return new ResponseEntity<>(new ResponseMessage(result), HttpStatus.BAD_REQUEST);
 //		}
 //	}
+	
+	@GetMapping("/demo")
+	public String getMessage() {
+		return "welcome jsr";
+	}
 
 	@PostMapping("/signup")
 	public ResponseEntity<ResponseMessage> createUser(@RequestBody SignUpEntity signUpEntity) {
@@ -614,50 +619,6 @@ public class SignUpController {
 //	}
 	
 //Default login method
-	@PostMapping("/login")
-	public ResponseEntity<ResponseMessage> loginUser(@RequestBody SignUpEntity userCredentials,
-	                                                 HttpServletResponse response) {
-	    synchronized (this) {
-	        if (!semaphore.tryAcquire()) {
-	            System.out.println("Rejected a user login because all permits are in use.");
-	            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-	                                 .body(new ResponseMessage("Server is busy. Please try again later."));
-	        }
-	    }
-
-	    try {
-	        Callable<Boolean> task = new LoginTask(userCredentials, signUpService1);
-	        boolean isValid = loginThreadPoolExecutor.submit(task).get();  // use the loginThreadPoolExecutor here
-
-	        if (isValid) {
-	            String token = signUpService1.getTokenForUser(userCredentials.getEmail());
-	            Cookie jwtCookie = new Cookie("jwt-token", token);
-	            jwtCookie.setHttpOnly(true);
-	            jwtCookie.setMaxAge(1 * 24 * 60 * 60);
-	            response.addCookie(jwtCookie);
-	            return ResponseEntity.ok(new ResponseMessage("Login successful"));
-	        } else {
-	            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-	                                 .body(new ResponseMessage("Invalid email or password"));
-	        }
-	    } catch (RejectedExecutionException ree) {
-	        System.out.println("Rejected by ThreadPoolExecutor: " + ree.getMessage());
-	        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(new ResponseMessage(
-	            "Server is currently processing maximum number of requests. Please try again later."));
-	    } catch (ExecutionException ee) {
-	        System.out.println("Execution exception: " + ee.getCause().getMessage());
-	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-	                             .body(new ResponseMessage("Error processing login: " + ee.getCause().getMessage()));
-	    } catch (InterruptedException ie) {
-	        Thread.currentThread().interrupt(); // Preserve the interrupt status
-	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-	                             .body(new ResponseMessage("Login processing was interrupted. Please try again."));
-	    } finally {
-	        semaphore.release();
-	    }
-	}
-	
-	//Arun kumar userEmail,userPassword
 //	@PostMapping("/login")
 //	public ResponseEntity<ResponseMessage> loginUser(@RequestBody SignUpEntity userCredentials,
 //	                                                 HttpServletResponse response) {
@@ -700,6 +661,50 @@ public class SignUpController {
 //	        semaphore.release();
 //	    }
 //	}
+	
+	//Arun kumar userEmail,userPassword
+	@PostMapping("/login")
+	public ResponseEntity<ResponseMessage> loginUser(@RequestBody SignUpEntity userCredentials,
+	                                                 HttpServletResponse response) {
+	    synchronized (this) {
+	        if (!semaphore.tryAcquire()) {
+	            System.out.println("Rejected a user login because all permits are in use.");
+	            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+	                                 .body(new ResponseMessage("Server is busy. Please try again later."));
+	        }
+	    }
+
+	    try {
+	        Callable<Boolean> task = new LoginTask(userCredentials, signUpService1);
+	        boolean isValid = loginThreadPoolExecutor.submit(task).get();  // use the loginThreadPoolExecutor here
+
+	        if (isValid) {
+	            String token = signUpService1.getTokenForUser(userCredentials.getUserEmail());
+	            Cookie jwtCookie = new Cookie("jwt-token", token);
+	            jwtCookie.setHttpOnly(true);
+	            jwtCookie.setMaxAge(1 * 24 * 60 * 60);
+	            response.addCookie(jwtCookie);
+	            return ResponseEntity.ok(new ResponseMessage("Login successful"));
+	        } else {
+	            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+	                                 .body(new ResponseMessage("Invalid email or password"));
+	        }
+	    } catch (RejectedExecutionException ree) {
+	        System.out.println("Rejected by ThreadPoolExecutor: " + ree.getMessage());
+	        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(new ResponseMessage(
+	            "Server is currently processing maximum number of requests. Please try again later."));
+	    } catch (ExecutionException ee) {
+	        System.out.println("Execution exception: " + ee.getCause().getMessage());
+	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+	                             .body(new ResponseMessage("Error processing login: " + ee.getCause().getMessage()));
+	    } catch (InterruptedException ie) {
+	        Thread.currentThread().interrupt(); // Preserve the interrupt status
+	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+	                             .body(new ResponseMessage("Login processing was interrupted. Please try again."));
+	    } finally {
+	        semaphore.release();
+	    }
+	}
 
 	@DeleteMapping("/logout")
 	public ResponseEntity<ResponseMessage> logoutUser() {
@@ -748,16 +753,56 @@ public class SignUpController {
 //	}
 	
 	//Arun useremail,userpassword
+//	@PostMapping("/Login")
+//	public ResponseEntity<ResponseMessageWithToken> loginUser(@RequestBody SignUpEntity userCredentials) {
+//		boolean isValid = signupservice.validateLogin(userCredentials.getUserEmail(), userCredentials.getUserPassword());
+//		if (isValid) {
+//			String token = signupservice.getTokenForUser(userCredentials.getEmail());
+//			return new ResponseEntity<>(new ResponseMessageWithToken("Login successfully", token), HttpStatus.OK);
+//		} else {
+//			return new ResponseEntity<>(new ResponseMessageWithToken("Invalid email or password", null),
+//					HttpStatus.UNAUTHORIZED);
+//		}
+//	}
+	
 	@PostMapping("/Login")
 	public ResponseEntity<ResponseMessageWithToken> loginUser(@RequestBody SignUpEntity userCredentials) {
-		boolean isValid = signupservice.validateLogin(userCredentials.getUserEmail(), userCredentials.getUserPassword());
-		if (isValid) {
-			String token = signupservice.getTokenForUser(userCredentials.getEmail());
-			return new ResponseEntity<>(new ResponseMessageWithToken("Login successfully", token), HttpStatus.OK);
-		} else {
-			return new ResponseEntity<>(new ResponseMessageWithToken("Invalid email or password", null),
-					HttpStatus.UNAUTHORIZED);
-		}
+	    // Acquiring the semaphore
+	    synchronized (this) {
+	        if (!semaphore.tryAcquire()) {
+	            System.out.println("Rejected a user login because all permits are in use.");
+	            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+	                                 .body(new ResponseMessageWithToken("Server is busy. Please try again later.", null));
+	        }
+	    }
+
+	    try {
+	        // Submitting the login task to the thread pool
+	        Callable<Boolean> task = () -> signupservice.validateLogin(userCredentials.getUserEmail(), userCredentials.getUserPassword());
+	        boolean isValid = loginThreadPoolExecutor.submit(task).get();
+
+	        if (isValid) {
+	            String token = signupservice.getTokenForUser(userCredentials.getUserEmail());
+	            return new ResponseEntity<>(new ResponseMessageWithToken("Login successfully", token), HttpStatus.OK);
+	        } else {
+	            return new ResponseEntity<>(new ResponseMessageWithToken("Invalid email or password", null),
+	                                        HttpStatus.UNAUTHORIZED);
+	        }
+	    } catch (RejectedExecutionException ree) {
+	        System.out.println("Rejected by ThreadPoolExecutor: " + ree.getMessage());
+	        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(new ResponseMessageWithToken(
+	            "Server is currently processing maximum number of requests. Please try again later.", null));
+	    } catch (ExecutionException ee) {
+	        System.out.println("Execution exception: " + ee.getCause().getMessage());
+	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+	                             .body(new ResponseMessageWithToken("Error processing login: " + ee.getCause().getMessage(), null));
+	    } catch (InterruptedException ie) {
+	        Thread.currentThread().interrupt(); // Preserve the interrupt status
+	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+	                             .body(new ResponseMessageWithToken("Login processing was interrupted. Please try again.", null));
+	    } finally {
+	        semaphore.release();
+	    }
 	}
 
 	// Get-addresses API with JWT token local variable
